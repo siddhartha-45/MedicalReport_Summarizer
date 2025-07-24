@@ -33,13 +33,6 @@ The application provides both a **Streamlit web interface** and a **Command Line
 
 ---
 
-## 📷 Demo
-
-![App Screenshot](https://user-images.githubusercontent.com/your-username/demo-screenshot.png)  
-> Upload → Analyze → Understand
-
----
-
 ## 🚀 Getting Started
 
 ### 🔧 Prerequisites
