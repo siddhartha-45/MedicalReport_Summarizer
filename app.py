@@ -6,8 +6,8 @@ from PIL import Image
 from groq import Groq
 import pytesseract
 from io import BytesIO
-import streamlit as st
 from dotenv import load_dotenv
+from flask import Flask, request, jsonify, render_template
 
 # Load environment variables from .env file
 load_dotenv()
@@ -68,142 +68,77 @@ class MedicalReportAnalyzer:
             return f"Error extracting image text: {str(e)}. Make sure Tesseract is installed."
     
     def analyze_medical_report(self, report_text):
-        """Analyze medical report using Groq API"""
+        """Analyze medical report using Groq API in JSON mode"""
         
         if not self.api_configured:
-            return f"API Error: {self.api_error}. Please configure your Groq API key."
+            return json.dumps({"error": f"API Error: {self.api_error}. Please configure your Groq API key."})
         
         system_prompt = """
-        You are an expert medical AI assistant that analyzes medical reports and provides comprehensive health insights. 
-        Your task is to analyze the medical report and provide:
+        You are an expert medical AI assistant that analyzes medical reports and provides structured JSON data.
+        Your task is to analyze the medical report and return a JSON object with the following fields:
+        
+        1. "problems": A list of health problems or conditions found. Each problem must be an object with:
+           - "name": Simple, understandable name (e.g. "High Blood Sugar" instead of "Hyperglycemia").
+           - "what_is_it": A clear explanation in everyday language of what this condition means, using simple analogies if helpful.
+           - "body_effect": A step-by-step description of what this does inside the body and what parts it affects.
+           - "causes": Common reasons why this happens (lifestyle, age, genetics, etc.).
+           - "numbers_meaning": Interpretation of the test numbers, comparing their value to the normal range, explained simply.
+           - "severity": Rating of this specific condition as "Normal", "Mild", "Moderate", or "Severe".
+           - "is_serious": Summary of risks if left untreated.
+           
+        2. "connections": A simple explanation of how the found problems are connected or how one might relate to another.
+        
+        3. "overall_severity": An object containing:
+           - "level": The overall severity classification ("Normal", "Mild", "Moderate", or "Severe").
+           - "explanation": In simple terms, what this severity means (e.g. like a dashboard warning light).
+           
+        4. "doctor": An object containing:
+           - "specialist": The type of doctor to consult.
+           - "reason": Why this specialist is appropriate.
+           - "timeline": How soon to see them ("Urgent", "Soon", or "Routine").
+           
+        5. "diet": An object containing:
+           - "helpful_foods": A list of objects, each with "food" (name) and "reason" (why it helps).
+           - "avoid_foods": A list of objects, each with "food" (name) and "reason" (why it hurts).
+           - "tips": List of simple, practical eating tips.
+           
+        6. "lifestyle": An object containing:
+           - "immediate_actions": List of things to do right away.
+           - "daily_changes": List of daily life adjustments.
+           - "precautions": List of activities to be careful with or avoid.
+           
+        7. "treatment": List of strings explaining potential treatment approaches and what to expect.
+        
+        8. "follow_up": List of strings explaining monitoring and follow-up timeline.
+        
+        9. "disclaimer": Standard medical disclaimer clarifying that this is informational and they must consult a real doctor.
 
-        1. **Problem Identification**: Clearly explain what health issues or conditions are identified
-        2. **Severity Assessment**: Rate as Normal/Mild/Moderate/Severe with reasoning
-        3. **Doctor Consultation**: Recommend which type of specialist to consult
-        4. **Dietary Recommendations**: Suggest specific foods to include/avoid
-        5. **Precautions & Lifestyle**: List important precautions and lifestyle changes
-        6. **Treatment Overview**: Explain potential treatment approaches
-        7. **Follow-up**: Recommend monitoring and follow-up schedule
-
-        Important: 
-        - Always include medical disclaimers
-        - Be clear about when immediate medical attention is needed
-        - Provide evidence-based recommendations
-        - Use simple, understandable language
-        - Structure your response clearly with headings
+        CRITICAL: You must return ONLY a raw JSON object. Do not wrap it in markdown formatting or add any leading/trailing text. Ensure the JSON is valid and parses correctly.
         """
         
         user_prompt = f"""
-        Please analyze this medical report with EXTREME DETAIL about the medical problems identified. I want very comprehensive explanations about the conditions found, but keep other sections standard length.
+        Please analyze this medical report with EXTREME DETAIL about the medical problems identified. I want very comprehensive explanations about the conditions found.
 
         MEDICAL REPORT TEXT:
         {report_text}
-
-        Please provide your analysis in the following format:
-
-        ## 🔍 WHAT'S WRONG WITH YOUR HEALTH? (DETAILED EXPLANATION)
-
-        
-        ### **HEALTH PROBLEMS FOUND:**
-
-        [For each condition/abnormality, explain:]
-
-        **Problem 1: [Name in simple terms, e.g., "High Blood Sugar" instead of "Hyperglycemia"]**
-
-        **What is this?**
-        - Explain in everyday language what this condition means
-        - Use comparisons to things people understand (like "your blood is like soup that's too thick")
-        - Avoid medical terms, or if used, immediately explain them in simple words
-
-        **How does this affect your body?**
-        - Describe step-by-step what happens inside your body
-        - Explain which parts of your body are affected and how
-        - Use simple analogies (like "your heart works like a pump")
-        - Describe any symptoms this might cause
-
-        **Why did this happen?**
-        - Explain the most common reasons this occurs
-        - Use simple cause-and-effect explanations
-        - Relate to lifestyle, age, genetics, or other easy-to-understand factors
-
-        **What do your test numbers mean?**
-        - Compare your numbers to what's normal (e.g., "Normal is 80-100, yours is 150")
-        - Explain if this is slightly high, very high, or extremely high
-        - Use simple comparisons ("This is like having 3 teaspoons of sugar in your blood when you should only have 2")
-
-        **Is this serious?**
-        - Clearly state if this is minor, moderate, or serious
-        - Explain what could happen if not treated
-        - Use simple terms about risks
-
-        **Problem 2: [If more problems exist]**
-        [Same detailed, simple explanation for each additional problem]
-
-        ### **HOW ARE THESE PROBLEMS CONNECTED?**
-        - Explain in simple terms how different health issues might be related
-        - Use easy examples of how one problem can cause another
-        - Help the person understand the "big picture" of their health
-
-        ### **WHAT DO YOUR TEST RESULTS MEAN?**
-        [For any lab values or test results:]
-        - **Your number vs. Normal number**: Clear comparison in simple terms
-        - **What this means**: Explain without medical jargon
-        - **Is this good or bad?**: Direct, honest assessment
-        - **How much off from normal?**: Use percentages or simple comparisons
-
-        ## ⚠️ HOW SERIOUS IS THIS?
-        **Level**: [Normal/Mild/Moderate/Severe]
-        **In Simple Terms**: [Explain severity using everyday language - e.g., "This is like having a warning light on your car dashboard - not an emergency, but needs attention soon"]
-
-        ## 🏥 WHICH DOCTOR TO SEE
-        **Type of Doctor**: [Specialist name]
-        **Why This Doctor**: [Simple explanation of what this doctor specializes in]
-        **How Soon**: [Urgent/Soon/Routine - with simple explanation]
-
-        ## 🥗 FOODS THAT HELP OR HURT
-        **Foods That Will Help You**:
-        - [List with simple explanations of why each food helps]
-
-        **Foods to Avoid**:
-        - [List with simple explanations of why each food is harmful]
-
-        **Easy Diet Tips**: [Simple, practical advice]
-
-        ## 🛡️ THINGS TO DO AND AVOID
-        **Important Things to Do Right Now**:
-        - [Simple, actionable steps]
-
-        **Changes to Make in Daily Life**:
-        - [Easy-to-understand lifestyle changes]
-
-        **Activities to Be Careful With**:
-        - [Clear activity guidelines]
-
-        ## 💊 TREATMENT - WHAT TO EXPECT
-        [Explain treatments in simple terms - what they do, how they work, what to expect]
-
-        ## 📅 FOLLOW-UP - WHAT HAPPENS NEXT
-        [Simple timeline of what needs to be done and when]
-
-        ## ⚕️ IMPORTANT REMINDER
-        This explanation is to help you understand your health better, but you must still see a real doctor. They know your full medical history and can give you proper treatment. Don't make medical decisions based only on this analysis.
         """
         
         try:
             response = self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",  # Using Llama 3.3 70B for comprehensive medical analysis
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3,
-                max_tokens=8000  # Increased token limit for detailed analysis
+                temperature=0.2,
+                response_format={"type": "json_object"},
+                max_tokens=8000
             )
             
             return response.choices[0].message.content
             
         except Exception as e:
-            return f"Error analyzing report: {str(e)}"
+            return json.dumps({"error": f"Error analyzing report: {str(e)}"})
     
     def process_file(self, file, file_type):
         """Process uploaded file and return analysis"""
@@ -230,128 +165,61 @@ class MedicalReportAnalyzer:
             "analysis": analysis
         }
 
-# Streamlit Web Application
-def main():
-    st.set_page_config(
-        page_title="Medical Report Analyzer",
-        page_icon="🏥",
-        layout="wide"
-    )
-    
-    st.title("🏥 AI Medical Report Analyzer")
-    st.markdown("Upload your medical report (PDF or Image) for comprehensive health insights")
-    
-    # Initialize analyzer - API key is automatically loaded from .env
+
+# Flask Application Setup
+app = Flask(__name__, static_folder="static", template_folder="templates")
+analyzer = None
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/api/analyze", methods=["POST"])
+def api_analyze():
+    global analyzer
+    if not analyzer:
+        try:
+            analyzer = MedicalReportAnalyzer()
+        except Exception as e:
+            return jsonify({"error": f"Analyzer config error: {str(e)}"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+        
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+        
+    file_type = file.filename.split('.')[-1].lower()
+    if file_type not in ["pdf", "jpg", "jpeg", "png", "tiff", "bmp"]:
+        return jsonify({"error": "Unsupported file format. Please upload PDF or images."}), 400
+        
     try:
-        analyzer = MedicalReportAnalyzer()
-        if analyzer.api_configured:
-            st.success("✅ AI Medical Analyzer Ready!")
-        else:
-            st.error(f"❌ API Configuration Error: {analyzer.api_error}")
-            st.info("Please check your .env file and ensure GROQ_API_KEY is set correctly.")
-            return
-    except ValueError as e:
-        st.error(f"❌ Configuration Error: {str(e)}")
-        st.info("Make sure you have a .env file with GROQ_API_KEY in your project directory.")
-        return
+        # Read file into memory buffer
+        file_bytes = BytesIO(file.read())
+        
+        result = analyzer.process_file(file_bytes, file_type)
+        
+        if isinstance(result, str):
+            return jsonify({"error": result}), 500
+            
+        # Parse analysis JSON string
+        try:
+            analysis_json = json.loads(result["analysis"])
+        except Exception as json_err:
+            analysis_json = {
+                "error": "Failed to parse AI response as JSON",
+                "raw_text": result["analysis"]
+            }
+            
+        return jsonify({
+            "extracted_text": result["extracted_text"],
+            "analysis": analysis_json
+        })
+        
     except Exception as e:
-        st.error(f"❌ Initialization Error: {str(e)}")
-        return
-    
-    # File upload
-    uploaded_file = st.file_uploader(
-        "Choose a medical report file",
-        type=['pdf', 'jpg', 'jpeg', 'png', 'tiff', 'bmp'],
-        help="Upload PDF documents or image files of medical reports"
-    )
-    
-    if uploaded_file is not None:
-        # Display file info
-        file_details = {
-            "Filename": uploaded_file.name,
-            "File size": f"{uploaded_file.size / 1024:.2f} KB",
-            "File type": uploaded_file.type
-        }
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.success("✅ File uploaded successfully!")
-            for key, value in file_details.items():
-                st.write(f"**{key}:** {value}")
-        
-        with col2:
-            # Show preview for images
-            if uploaded_file.type.startswith('image/'):
-                st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-        
-        # Determine file type
-        file_type = uploaded_file.name.split('.')[-1].lower()
-        
-        # Process button
-        if st.button("🔍 Analyze Medical Report", type="primary"):
-            with st.spinner("Processing your medical report..."):
-                try:
-                    # Process the file
-                    result = analyzer.process_file(uploaded_file, file_type)
-                    
-                    if isinstance(result, dict):
-                        # Display extracted text
-                        with st.expander("📄 Extracted Text from Report", expanded=False):
-                            st.text_area("Raw Text", result["extracted_text"], height=200)
-                        
-                        # Display analysis
-                        st.markdown("## 📋 Medical Analysis Report")
-                        st.markdown(result["analysis"])
-                        
-                        # Download option
-                        analysis_text = f"MEDICAL REPORT ANALYSIS\n{'='*50}\n\n{result['analysis']}"
-                        st.download_button(
-                            label="💾 Download Analysis Report",
-                            data=analysis_text,
-                            file_name=f"medical_analysis_{uploaded_file.name}.txt",
-                            mime="text/plain"
-                        )
-                        
-                    else:
-                        st.error(result)
-                        
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-                    st.info("Please check if Tesseract OCR is installed for image processing.")
-    
-    # Instructions and disclaimers
-    with st.sidebar:
-        st.markdown("### 📋 Instructions")
-        st.markdown("""
-        1. Configure your Groq API key above
-        2. Upload a medical report (PDF/Image)
-        3. Click 'Analyze Medical Report'
-        4. Review the comprehensive analysis
-        5. Download the report if needed
-        """)
-        
-        st.markdown("### ⚠️ Important Notes")
-        st.markdown("""
-        - This tool is for informational purposes only
-        - Always consult healthcare professionals
-        - Do not delay seeking medical attention
-        - Keep your medical data secure
-        """)
-        
-        st.markdown("### 🔧 Supported Formats")
-        st.markdown("""
-        - **PDF**: Medical reports, lab results
-        - **Images**: JPG, PNG, TIFF, BMP
-        - **OCR**: Automatic text extraction
-        """)
-        
-        st.markdown("### 💡 Tips for Better Results")
-        st.markdown("""
-        - Use high-quality, clear images
-        - Ensure text is readable and not blurry
-        - For images, good lighting helps OCR
-        - PDF files generally work better than images
-        """)
+        return jsonify({"error": str(e)}), 500
+
 
 # Command Line Interface
 class CLIMedicalAnalyzer:
@@ -377,7 +245,6 @@ class CLIMedicalAnalyzer:
     
     def run(self):
         """Run the CLI version"""
-        
         if not self.analyzer:
             return
         
@@ -400,9 +267,7 @@ class CLIMedicalAnalyzer:
                 print("❌ Invalid choice. Please try again.")
     
     def analyze_pdf(self):
-        """Analyze PDF file"""
         file_path = input("Enter PDF file path: ").strip()
-        
         try:
             with open(file_path, 'rb') as file:
                 result = self.analyzer.process_file(file, 'pdf')
@@ -413,9 +278,7 @@ class CLIMedicalAnalyzer:
             print(f"❌ Error: {str(e)}")
     
     def analyze_image(self):
-        """Analyze image file"""
         file_path = input("Enter image file path: ").strip()
-        
         try:
             with open(file_path, 'rb') as file:
                 file_ext = file_path.split('.')[-1].lower()
@@ -427,11 +290,32 @@ class CLIMedicalAnalyzer:
             print(f"❌ Error: {str(e)}")
     
     def display_result(self, result, file_path):
-        """Display analysis result"""
         if isinstance(result, dict):
             print(f"\n📄 Analysis for: {file_path}")
             print("=" * 50)
-            print(result["analysis"])
+            
+            # Print parsed JSON details in a nice readable text format
+            try:
+                data = json.loads(result["analysis"])
+                print(f"\n[OVERALL SEVERITY: {data.get('overall_severity', {}).get('level', 'N/A')}]")
+                print(f"Explanation: {data.get('overall_severity', {}).get('explanation', 'N/A')}")
+                
+                print("\nHEALTH PROBLEMS FOUND:")
+                for i, prob in enumerate(data.get("problems", [])):
+                    print(f"\n  Problem {i+1}: {prob.get('name')}")
+                    print(f"    - What is it: {prob.get('what_is_it')}")
+                    print(f"    - Body effect: {prob.get('body_effect')}")
+                    print(f"    - Causes: {prob.get('causes')}")
+                    print(f"    - Numbers interpretation: {prob.get('numbers_meaning')}")
+                    print(f"    - Specific severity: {prob.get('severity')}")
+                    
+                print(f"\nCONNECTIONS:\n  {data.get('connections')}")
+                
+                doc = data.get('doctor', {})
+                print(f"\nRECOMMENDED SPECIALIST:\n  Consult {doc.get('specialist')} ({doc.get('timeline')}ly) - Reason: {doc.get('reason')}")
+                
+            except Exception:
+                print(result["analysis"])
             
             save = input("\n💾 Save analysis to file? (y/n): ").lower()
             if save == 'y':
@@ -442,13 +326,20 @@ class CLIMedicalAnalyzer:
         else:
             print(f"❌ {result}")
 
+
 if __name__ == "__main__":
     import sys
     
+    # Initialize analyzer for backend
+    try:
+        analyzer = MedicalReportAnalyzer()
+    except Exception:
+        pass
+
     if len(sys.argv) > 1 and sys.argv[1] == "--cli":
-        # Run CLI version
         cli = CLIMedicalAnalyzer()
         cli.run()
     else:
-        # Run Streamlit web app
-        main()
+        # Run Flask web app
+        port = int(os.getenv("PORT", 5000))
+        app.run(host="0.0.0.0", port=port, debug=True)

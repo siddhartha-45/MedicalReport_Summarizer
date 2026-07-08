@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Medical Report Analyzer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- CSS stylesheet link -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="icon">🏥</span>
+                <h2>HealthScan AI</h2>
+            </div>
+            
+            <div class="sidebar-card status-card">
+                <span class="status-indicator"></span>
+                <div>
+                    <h4>System Status</h4>
+                    <p>AI Engine Ready</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <h3>📋 Guide & Options</h3>
+                <div class="nav-item">
+                    <span class="nav-icon">💡</span>
+                    <div>
+                        <h4>How to Use</h4>
+                        <p>Upload a PDF or image medical report, then click analyze to get clinical interpretations.</p>
+                    </div>
+                </div>
+                <div class="nav-item">
+                    <span class="nav-icon">🔧</span>
+                    <div>
+                        <h4>Supported Formats</h4>
+                        <p>PDF, PNG, JPG, JPEG, TIFF, BMP. Digital files work best.</p>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-card disclaimer-card">
+                <h4>⚠️ Medical Disclaimer</h4>
+                <p>This tool is for informational purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult with a qualified physician for any health concerns.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Floating Theme Toggle Button -->
+            <div class="theme-toggle-wrapper">
+                <button class="theme-btn" id="themeToggleBtn" title="Toggle Theme">
+                    <span class="theme-btn-icon">🌙</span>
+                </button>
+            </div>
+
+            <header class="app-header">
+                <h1 class="gradient-text">AI Medical Report Analyzer</h1>
+                <p class="subtitle">Extract, analyze, and understand your health reports in seconds with LLaMA 3.3 AI</p>
+            </header>
+
+            <section class="upload-section">
+                <div class="glass-card upload-container" id="dropzone">
+                    <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" style="display: none;">
+                    <div class="upload-icon">📤</div>
+                    <h3>Drag & Drop your report here</h3>
+                    <p>or <span class="browse-btn" id="browseBtn">browse files</span> from your computer</p>
+                    <span class="file-limits">Supports PDF, PNG, JPG up to 10MB</span>
+                </div>
+
+                <!-- Selected File Card -->
+                <div class="glass-card file-card" id="fileCard" style="display: none;">
+                    <div class="file-info-header">
+                        <span class="file-icon" id="fileIcon">📄</span>
+                        <div class="file-metadata">
+                            <h4 id="fileName">report.pdf</h4>
+                            <p id="fileSize">0.00 KB</p>
+                        </div>
+                        <button class="remove-file-btn" id="removeFileBtn" title="Remove file">&times;</button>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button class="btn btn-primary" id="analyzeBtn" disabled>
+                    <span class="btn-text">🔍 Analyze Medical Report</span>
+                    <span class="btn-loader" style="display: none;">
+                        <span class="spinner"></span>
+                        <span class="loader-text" id="loaderText">Processing...</span>
+                    </span>
+                </button>
+            </section>
+
+            <!-- Results Dashboard (Hidden initially) -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="section-title-wrapper">
+                    <span class="badge">Success</span>
+                    <h2>📊 Clinical Analysis Dashboard</h2>
+                </div>
+
+                <!-- Dashboard Counters metrics row -->
+                <div class="metrics-row" id="metricsRow">
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon alert-icon">⚠️</div>
+                        <div class="metric-data">
+                            <span class="metric-num" id="metricConditions">0</span>
+                            <span class="metric-label">Conditions Found</span>
+                        </div>
+                    </div>
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon doctor-icon">👨‍⚕️</div>
+                        <div class="metric-data">
+                            <span class="metric-num" id="metricSpecialist">None</span>
+                            <span class="metric-label">Specialist Needed</span>
+                        </div>
+                    </div>
+                    <div class="glass-card metric-card">
+                        <div class="metric-icon action-icon">⚡</div>
+                        <div class="metric-data">
+                            <span class="metric-num" id="metricActions">0</span>
+                            <span class="metric-label">Immediate Actions</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Left Panel: Summary & Specialist -->
+                    <div class="grid-col-left">
+                        <!-- Overall Severity Card -->
+                        <div class="severity-card" id="severityCard">
+                            <div class="severity-badge-wrapper">
+                                <span class="severity-badge" id="overallSeverityLevel">MODERATE</span>
+                            </div>
+                            <h3 id="severityTitle">Severity Assessment</h3>
+                            <p id="severityExplanation">Explanation of findings...</p>
+                        </div>
+
+                        <!-- Specialist Recommendation Card -->
+                        <div class="glass-card doctor-card">
+                            <h3>🏥 Specialist Consultation</h3>
+                            <div class="doctor-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Recommended Practitioner</span>
+                                    <span class="detail-value" id="doctorSpecialist">Endocrinologist</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Time Frame</span>
+                                    <span class="detail-value warning" id="doctorTimeline">Soon</span>
+                                </div>
+                            </div>
+                            <div class="doctor-reason">
+                                <span class="detail-label">Reason for Consultation</span>
+                                <p id="doctorReason">Explanation why this doctor is recommended.</p>
+                            </div>
+                        </div>
+
+                        <!-- Connections Card -->
+                        <div class="glass-card connections-card">
+                            <h3>🔗 Condition Connections</h3>
+                            <p id="connectionsText">How these health factors connect to each other...</p>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Tabs for Details -->
+                    <div class="grid-col-right glass-card results-details-card">
+                        <!-- Tab Headers -->
+                        <div class="tab-list">
+                            <button class="tab-btn active" data-tab="tab-diagnosis">🔍 Diagnosis</button>
+                            <button class="tab-btn" data-tab="tab-diet">🥗 Diet & Nutrition</button>
+                            <button class="tab-btn" data-tab="tab-lifestyle">🛡️ Habits & Lifestyle</button>
+                            <button class="tab-btn" data-tab="tab-treatment">💊 Care & Timeline</button>
+                        </div>
+
+                        <!-- Tab Panes -->
+                        <div class="tab-content">
+                            <!-- Tab: Diagnosis -->
+                            <div class="tab-pane active" id="tab-diagnosis">
+                                <h3>Health Problems Found</h3>
+                                <div class="problems-container" id="problemsList">
+                                    <!-- Dynamic problem cards will render here -->
+                                </div>
+                            </div>
+
+                            <!-- Tab: Diet & Nutrition -->
+                            <div class="tab-pane" id="tab-diet">
+                                <h3>Dietary Guidance</h3>
+                                <div class="diet-grid">
+                                    <div class="diet-card helpful">
+                                        <h4>🟢 Foods to Include</h4>
+                                        <ul id="helpfulFoodsList" class="icon-list check-list">
+                                            <!-- Dynamic items -->
+                                        </ul>
+                                    </div>
+                                    <div class="diet-card avoid">
+                                        <h4>🔴 Foods to Avoid</h4>
+                                        <ul id="avoidFoodsList" class="icon-list cross-list">
+                                            <!-- Dynamic items -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="diet-tips-section" id="dietTipsWrapper">
+                                    <h4>💡 Diet & Eating Tips</h4>
+                                    <ul id="dietTipsList" class="bullet-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Habits & Lifestyle -->
+                            <div class="tab-pane" id="tab-lifestyle">
+                                <h3>Habits & Lifestyle Actions</h3>
+                                <div class="lifestyle-section">
+                                    <h4>🚨 Immediate Actions Required</h4>
+                                    <ul id="immediateActionsList" class="action-check-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                                <div class="lifestyle-section">
+                                    <h4>🏃 Daily Changes & Habits</h4>
+                                    <ul id="dailyChangesList" class="bullet-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                                <div class="lifestyle-section">
+                                    <h4>⚠️ Activities to Avoid / Careful With</h4>
+                                    <ul id="precautionsList" class="warning-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Tab: Care & Timeline -->
+                            <div class="tab-pane" id="tab-treatment">
+                                <h3>Care Expectations & Timeline</h3>
+                                <div class="care-block">
+                                    <h4>💊 Expected Treatment Protocols</h4>
+                                    <ul id="treatmentList" class="bullet-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                                <div class="care-block">
+                                    <h4>📅 Recommended Monitoring & Follow-up</h4>
+                                    <ul id="followUpList" class="timeline-list">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Dashboard Controls -->
+                <div class="dashboard-footer">
+                    <button class="btn btn-secondary" id="printReportBtn">🖨️ Print / Save PDF Summary</button>
+                    <button class="btn btn-secondary" id="rawReportDownloadBtn">💾 Download Analysis Data</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- main.js link -->
+    <script src="/static/main.js"></script>
+</body>
+</html>
