@@ -344,6 +344,36 @@ body {
     top: 40px;
     right: 50px;
     z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.language-dropdown-wrapper {
+    width: 145px;
+}
+
+.language-select-header {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid var(--border-color) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 8px;
+    padding: 9px 30px 9px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: var(--transition-smooth);
+}
+
+[data-theme="light"] .language-select-header {
+    background: rgba(0, 0, 0, 0.015) !important;
+    color: var(--text-primary);
+}
+
+.language-select-header:hover {
+    border-color: var(--brand-primary) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
 }
 
 .theme-btn {

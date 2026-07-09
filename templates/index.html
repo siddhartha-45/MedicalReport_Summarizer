@@ -51,24 +51,6 @@
                 </div>
             </nav>
 
-            <!-- Language Selector -->
-            <div class="sidebar-card language-card">
-                <h4>🌐 Select Language</h4>
-                <div class="select-wrapper">
-                    <select id="languageSelect" class="form-select">
-                        <option value="English" selected>English</option>
-                        <option value="Hindi">Hindi (हिंदी)</option>
-                        <option value="Telugu">Telugu (తెలుగు)</option>
-                        <option value="Tamil">Tamil (தமிழ்)</option>
-                        <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
-                        <option value="Malayalam">Malayalam (മലയാളം)</option>
-                        <option value="Bengali">Bengali (বাংলা)</option>
-                        <option value="Marathi">Marathi (मराठी)</option>
-                        <option value="Gujarati">Gujarati (ગુજરાતી)</option>
-                    </select>
-                </div>
-            </div>
-
             <div class="sidebar-card disclaimer-card">
                 <h4>⚠️ Medical Disclaimer</h4>
                 <p>This tool is for informational purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult with a qualified physician for any health concerns.</p>
@@ -77,8 +59,21 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Floating Theme Toggle Button -->
+            <!-- Top Controls (Theme & Language) -->
             <div class="theme-toggle-wrapper">
+                <div class="select-wrapper language-dropdown-wrapper">
+                    <select id="languageSelect" class="form-select language-select-header">
+                        <option value="English" selected>🌐 English</option>
+                        <option value="Hindi">हिंदी (Hindi)</option>
+                        <option value="Telugu">తెలుగు (Telugu)</option>
+                        <option value="Tamil">தமிழ் (Tamil)</option>
+                        <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+                        <option value="Malayalam">മലയാളം (Malayalam)</option>
+                        <option value="Bengali">বাংলা (Bengali)</option>
+                        <option value="Marathi">मराठी (Marathi)</option>
+                        <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+                    </select>
+                </div>
                 <button class="theme-btn" id="themeToggleBtn" title="Toggle Theme">
                     <span class="theme-btn-icon">🌙</span>
                 </button>
