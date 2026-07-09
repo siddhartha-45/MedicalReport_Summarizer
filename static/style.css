@@ -1281,6 +1281,8 @@ body {
     .main-content {
         width: 100% !important;
         padding: 0 !important;
+        display: block !important;
+        overflow: visible !important;
     }
     .gradient-text {
         background: none !important;
@@ -1303,11 +1305,22 @@ body {
         margin-bottom: 20px !important;
         page-break-inside: avoid;
     }
+    .results-details-card {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
     .tab-content {
         padding: 0 !important;
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
     }
     .tab-pane {
         display: block !important;
+        overflow: visible !important;
+        height: auto !important;
         page-break-before: always;
     }
     .problem-item {
