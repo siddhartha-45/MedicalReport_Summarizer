@@ -137,7 +137,7 @@ class MedicalReportAnalyzer:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.2,
+                temperature=0.0,
                 response_format={"type": "json_object"},
                 max_tokens=8000
             )
