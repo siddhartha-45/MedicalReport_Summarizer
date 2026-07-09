@@ -1321,8 +1321,10 @@ body {
         overflow: visible !important;
         height: auto !important;
     }
-    .tab-pane {
+    .tab-pane, .tab-pane.active {
         display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         overflow: visible !important;
         height: auto !important;
         page-break-before: always;
