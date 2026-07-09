@@ -5,7 +5,7 @@
 [[redirects]]
   # Redirect any backend API call to the hosted Flask server instance
   from = "/api/*"
-  to = "https://YOUR_BACKEND_URL/api/:splat"
+  to = "https://medicalreport-summarizer.onrender.com"
   status = 200
   force = true
   headers = {X-From = "Netlify"}
