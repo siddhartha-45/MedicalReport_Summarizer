@@ -15,8 +15,9 @@ load_dotenv()
 class MedicalReportAnalyzer:
     def __init__(self, groq_api_key=None):
         """Initialize the medical report analyzer with Groq API key"""
-        # Get API key from .env file
         api_key = groq_api_key or os.getenv("GROQ_API_KEY")
+        if api_key:
+            api_key = api_key.strip("'\"")
         
         if not api_key:
             raise ValueError("GROQ_API_KEY not found. Please check your .env file.")
