@@ -68,7 +68,7 @@ class MedicalReportAnalyzer:
         except Exception as e:
             return f"Error extracting image text: {str(e)}. Make sure Tesseract is installed."
     
-    def analyze_medical_report(self, report_text):
+    def analyze_medical_report(self, report_text, language="English"):
         """Analyze medical report using Groq API in JSON mode"""
         
         if not self.api_configured:
@@ -81,6 +81,10 @@ class MedicalReportAnalyzer:
         First, evaluate if the provided document text is medical-related, clinical, or a health report (such as laboratory tests, blood panels, prescriptions, clinical notes, doctor orders, scan results, or patient records).
         If the document is NOT medical-related (for example, if it is a financial receipt, utility bill, software code, resume, school essay, general literature, or random non-medical text), you MUST immediately return a JSON object containing ONLY the "error" field with a message explaining that the document is not a medical report. Do not populate any other fields.
         Example response format: {"error": "The uploaded document does not appear to be a medical report. Please upload a valid laboratory test, prescription, or clinical health record."}
+
+        MULTILINGUAL REQUIREMENT:
+        You must generate all user-facing explanations, descriptions, recommendations, diet names, food descriptions, tips, and guidelines in the requested language: {language}.
+        Ensure that the JSON keys (e.g., "problems", "name", "what_is_it", "body_effect", "causes", "numbers_meaning", "severity", "is_serious", "connections", "overall_severity", "level", "explanation", "doctor", "specialist", "reason", "timeline", "diet", "helpful_foods", "food", "avoid_foods", "tips", "lifestyle", "immediate_actions", "daily_changes", "precautions", "treatment", "follow_up", "disclaimer") remain EXACTLY in English so the web client can parse the response. Only translate their string values or list items.
 
         If the document IS medical-related, you must analyze it and return a JSON object with the following fields:
         
@@ -121,7 +125,7 @@ class MedicalReportAnalyzer:
         9. "disclaimer": Standard medical disclaimer clarifying that this is informational and they must consult a real doctor.
 
         CRITICAL: You must return ONLY a raw JSON object. Do not wrap it in markdown formatting or add any leading/trailing text. Ensure the JSON is valid and parses correctly.
-        """
+        """.replace("{language}", language)
         
         user_prompt = f"""
         Please analyze this medical report with EXTREME DETAIL about the medical problems identified. I want very comprehensive explanations about the conditions found.
@@ -147,7 +151,7 @@ class MedicalReportAnalyzer:
         except Exception as e:
             return json.dumps({"error": f"Error analyzing report: {str(e)}"})
     
-    def process_file(self, file, file_type):
+    def process_file(self, file, file_type, language="English"):
         """Process uploaded file and return analysis"""
         
         # Extract text based on file type
@@ -165,7 +169,7 @@ class MedicalReportAnalyzer:
             return "No text could be extracted from the file. Please ensure the file contains readable text."
         
         # Analyze the extracted text
-        analysis = self.analyze_medical_report(extracted_text)
+        analysis = self.analyze_medical_report(extracted_text, language=language)
         
         return {
             "extracted_text": extracted_text,
@@ -205,7 +209,8 @@ def api_analyze():
         # Read file into memory buffer
         file_bytes = BytesIO(file.read())
         
-        result = analyzer.process_file(file_bytes, file_type)
+        language = request.form.get("language", "English")
+        result = analyzer.process_file(file_bytes, file_type, language=language)
         
         if isinstance(result, str):
             return jsonify({"error": result}), 500

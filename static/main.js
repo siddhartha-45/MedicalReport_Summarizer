@@ -202,6 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build FormData payload
         const formData = new FormData();
         formData.append('file', selectedFile);
+        
+        const languageSelect = document.getElementById('languageSelect');
+        const selectedLanguage = languageSelect ? languageSelect.value : 'English';
+        formData.append('language', selectedLanguage);
 
         try {
             const response = await fetch('/api/analyze', {
