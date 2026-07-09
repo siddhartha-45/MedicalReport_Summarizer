@@ -1,0 +1,11 @@
+[build]
+  # Publish directory is the current directory (since base directory is set to public)
+  publish = "."
+
+[[redirects]]
+  # Redirect any backend API call to the hosted Flask server instance
+  from = "/api/*"
+  to = "https://medicalreport-summarizer.onrender.com/api/:splat"
+  status = 200
+  force = true
+  headers = {X-From = "Netlify"}
