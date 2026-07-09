@@ -76,7 +76,13 @@ class MedicalReportAnalyzer:
         
         system_prompt = """
         You are an expert medical AI assistant that analyzes medical reports and provides structured JSON data.
-        Your task is to analyze the medical report and return a JSON object with the following fields:
+        
+        CRITICAL VALIDATION STEP:
+        First, evaluate if the provided document text is medical-related, clinical, or a health report (such as laboratory tests, blood panels, prescriptions, clinical notes, doctor orders, scan results, or patient records).
+        If the document is NOT medical-related (for example, if it is a financial receipt, utility bill, software code, resume, school essay, general literature, or random non-medical text), you MUST immediately return a JSON object containing ONLY the "error" field with a message explaining that the document is not a medical report. Do not populate any other fields.
+        Example response format: {"error": "The uploaded document does not appear to be a medical report. Please upload a valid laboratory test, prescription, or clinical health record."}
+
+        If the document IS medical-related, you must analyze it and return a JSON object with the following fields:
         
         1. "problems": A list of health problems or conditions found. Each problem must be an object with:
            - "name": Simple, understandable name (e.g. "High Blood Sugar" instead of "Hyperglycemia").
@@ -207,6 +213,8 @@ def api_analyze():
         # Parse analysis JSON string
         try:
             analysis_json = json.loads(result["analysis"])
+            if "error" in analysis_json and "does not appear" in analysis_json["error"]:
+                return jsonify({"error": analysis_json["error"]}), 400
         except Exception as json_err:
             analysis_json = {
                 "error": "Failed to parse AI response as JSON",
@@ -298,6 +306,9 @@ class CLIMedicalAnalyzer:
             # Print parsed JSON details in a nice readable text format
             try:
                 data = json.loads(result["analysis"])
+                if "error" in data:
+                    print(f"\n❌ Validation Error: {data['error']}")
+                    return
                 print(f"\n[OVERALL SEVERITY: {data.get('overall_severity', {}).get('level', 'N/A')}]")
                 print(f"Explanation: {data.get('overall_severity', {}).get('explanation', 'N/A')}")
                 
