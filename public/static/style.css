@@ -1268,12 +1268,16 @@ body {
 
 /* Print Overrides */
 @media print {
-    body {
+    html, body {
         background: white !important;
         color: black !important;
+        overflow: visible !important;
+        height: auto !important;
     }
     .app-container {
         display: block !important;
+        overflow: visible !important;
+        height: auto !important;
     }
     .sidebar, .upload-section, .tab-list, .dashboard-footer, .section-title-wrapper, .theme-toggle-wrapper {
         display: none !important;
@@ -1342,5 +1346,11 @@ body {
     }
     .accordion-arrow {
         display: none !important;
+    }
+    .problem-details-grid, .diet-grid, .doctor-details {
+        display: block !important;
+    }
+    .problem-detail-block, .diet-card {
+        margin-bottom: 15px !important;
     }
 }
