@@ -209,11 +209,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
 
-            const data = await response.json();
             clearInterval(messageInterval);
 
+            let data = null;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    console.error("Failed to parse JSON response:", e);
+                }
+            }
+
             if (!response.ok) {
-                throw new Error(data.error || 'Server error occurred during analysis');
+                const errMsg = (data && data.error) ? data.error : `Server error (${response.status}): The server may have timed out or crashed. Please try again.`;
+                throw new Error(errMsg);
+            }
+
+            if (!data) {
+                throw new Error("Received empty or invalid response from the server.");
             }
 
             analysisResultData = data;

@@ -24,4 +24,4 @@ COPY . .
 EXPOSE 5000
 
 # Run gunicorn to serve the Flask app, utilizing PORT env variable if present
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} app:app"]
+CMD ["sh", "-c", "gunicorn --timeout 120 --bind 0.0.0.0:${PORT:-5000} app:app"]
