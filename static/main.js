@@ -35,6 +35,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     let analysisResultData = null;
 
+    // Camera DOM Elements
+    const cameraBtn = document.getElementById('cameraBtn');
+    const cameraInput = document.getElementById('cameraInput');
+    const cameraModal = document.getElementById('cameraModal');
+    const closeCameraBtn = document.getElementById('closeCameraBtn');
+    const webcamVideo = document.getElementById('webcamVideo');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    const cameraPreviewContainer = document.getElementById('cameraPreviewContainer');
+    const capturedCanvas = document.getElementById('capturedCanvas');
+    const capturedImage = document.getElementById('capturedImage');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const cameraSelectWrapper = document.getElementById('cameraSelectWrapper');
+    const cancelCaptureBtn = document.getElementById('cancelCaptureBtn');
+    const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+    const usePhotoBtn = document.getElementById('usePhotoBtn');
+    const retakePhotoBtn = document.getElementById('retakePhotoBtn');
+    
+    // Camera state
+    let cameraStream = null;
+    let availableCameras = [];
+    let activeCameraId = null;
+
     // --- Theme Swapping System ---
 
     // Initialize theme from cache
@@ -104,8 +126,272 @@ document.addEventListener('DOMContentLoaded', () => {
         resetFileSelection();
     });
 
+    // --- Camera Capture Operations ---
+
+    cameraBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // Detect if mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Natively trigger system camera capture intent
+            cameraInput.click();
+        } else {
+            // Open inline webcam modal overlay
+            openCameraModal();
+        }
+    });
+
+    cameraInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    async function openCameraModal() {
+        cameraModal.style.display = 'flex';
+        resetCameraCaptureUI();
+        await startWebcam();
+    }
+
+    function closeCameraModal() {
+        stopWebcam();
+        cameraModal.style.display = 'none';
+    }
+
+    closeCameraBtn.addEventListener('click', closeCameraModal);
+    cancelCaptureBtn.addEventListener('click', closeCameraModal);
+    
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cameraModal.style.display === 'flex') {
+            closeCameraModal();
+        }
+    });
+
+    async function startWebcam() {
+        stopWebcam();
+        cameraPlaceholder.style.display = 'flex';
+        webcamVideo.style.display = 'none';
+        
+        const constraints = {
+            video: {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                facingMode: "environment" // Prefer rear camera on smart devices
+            },
+            audio: false
+        };
+
+        if (activeCameraId) {
+            constraints.video.deviceId = { exact: activeCameraId };
+        }
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            webcamVideo.srcObject = cameraStream;
+            
+            webcamVideo.onloadedmetadata = () => {
+                webcamVideo.play();
+                cameraPlaceholder.style.display = 'none';
+                webcamVideo.style.display = 'block';
+                
+                // Adjust mirror effect depending on facing direction (front vs back)
+                const track = cameraStream.getVideoTracks()[0];
+                const settings = track.getSettings ? track.getSettings() : {};
+                const isFront = settings.facingMode === 'user' || 
+                                (track.label && track.label.toLowerCase().includes('front'));
+                webcamVideo.classList.toggle('mirrored', isFront);
+            };
+
+            // Enumerate cameras if not done yet
+            if (availableCameras.length === 0) {
+                await loadCameraDevices();
+            }
+        } catch (err) {
+            console.error("Camera access error:", err);
+            cameraPlaceholder.querySelector('p').textContent = `Camera access denied or unavailable: ${err.message}`;
+        }
+    }
+
+    function stopWebcam() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        webcamVideo.srcObject = null;
+    }
+
+    async function loadCameraDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            availableCameras = devices.filter(device => device.kind === 'videoinput');
+            
+            if (availableCameras.length > 1) {
+                cameraSelect.innerHTML = '';
+                availableCameras.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `Camera ${index + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+                cameraSelectWrapper.style.display = 'block';
+                
+                // Keep the active camera choice selected in list
+                if (cameraStream) {
+                    const activeTrack = cameraStream.getVideoTracks()[0];
+                    const activeSettings = activeTrack.getSettings ? activeTrack.getSettings() : {};
+                    if (activeSettings.deviceId) {
+                        cameraSelect.value = activeSettings.deviceId;
+                        activeCameraId = activeSettings.deviceId;
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to enumerate camera devices:", err);
+        }
+    }
+
+    cameraSelect.addEventListener('change', (e) => {
+        activeCameraId = e.target.value;
+        startWebcam();
+    });
+
+    function resetCameraCaptureUI() {
+        webcamVideo.style.display = 'block';
+        cameraPreviewContainer.style.display = 'none';
+        capturedImage.src = '';
+        
+        capturePhotoBtn.style.display = 'inline-flex';
+        usePhotoBtn.style.display = 'none';
+        retakePhotoBtn.style.display = 'none';
+        
+        if (cameraStream) {
+            cameraPlaceholder.style.display = 'none';
+        } else {
+            cameraPlaceholder.style.display = 'flex';
+        }
+    }
+
+    capturePhotoBtn.addEventListener('click', () => {
+        if (!cameraStream) return;
+
+        const videoWidth = webcamVideo.videoWidth || 640;
+        const videoHeight = webcamVideo.videoHeight || 480;
+        
+        capturedCanvas.width = videoWidth;
+        capturedCanvas.height = videoHeight;
+        
+        const ctx = capturedCanvas.getContext('2d');
+        
+        // Handle mirroring if front camera is active
+        const isMirrored = webcamVideo.classList.contains('mirrored');
+        if (isMirrored) {
+            ctx.translate(videoWidth, 0);
+            ctx.scale(-1, 1);
+        }
+        
+        ctx.drawImage(webcamVideo, 0, 0, videoWidth, videoHeight);
+        
+        if (isMirrored) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        
+        const dataUrl = capturedCanvas.toDataURL('image/png');
+        capturedImage.src = dataUrl;
+        
+        webcamVideo.style.display = 'none';
+        cameraPreviewContainer.style.display = 'block';
+        
+        capturePhotoBtn.style.display = 'none';
+        usePhotoBtn.style.display = 'inline-flex';
+        retakePhotoBtn.style.display = 'inline-flex';
+        
+        stopWebcam();
+    });
+
+    retakePhotoBtn.addEventListener('click', () => {
+        resetCameraCaptureUI();
+        startWebcam();
+    });
+
+    usePhotoBtn.addEventListener('click', () => {
+        capturedCanvas.toBlob((blob) => {
+            if (blob) {
+                const filename = `camera_scan_${Date.now()}.png`;
+                const file = new File([blob], filename, { type: 'image/png' });
+                handleFileSelect(file);
+                closeCameraModal();
+            } else {
+                alert("Error processing captured image data.");
+            }
+        }, 'image/png');
+    });
+
     // --- File Selection Core Logic ---
     
+    // --- Image Compression & Downscaling for faster OCR and upload ---
+    function compressImage(file, callback) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        // If it's a PDF, skip compression
+        if (ext === 'pdf') {
+            callback(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const maxDim = 1600; // Optimal resolution for Tesseract OCR
+                let width = img.width;
+                let height = img.height;
+
+                // Scale image down if width or height exceeds maxDim
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        // Change extension to .jpg since we compile to JPEG format
+                        const baseName = file.name.replace(/\.[^/.]+$/, "");
+                        const newFilename = `${baseName}_optimized.jpg`;
+                        const compressedFile = new File([blob], newFilename, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        console.log(`Image optimized. Original: ${formatBytes(file.size)}, Optimized: ${formatBytes(compressedFile.size)}`);
+                        callback(compressedFile);
+                    } else {
+                        callback(file); // Fallback to original
+                    }
+                }, 'image/jpeg', 0.85); // Compress to JPEG with 85% quality
+            };
+            img.onerror = function() {
+                callback(file);
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            callback(file);
+        };
+        reader.readAsDataURL(file);
+    }
+
     function handleFileSelect(file) {
         if (!file) return;
         
@@ -117,25 +403,30 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        selectedFile = file;
-        
-        // Show file details card
-        fileName.textContent = file.name;
-        fileSize.textContent = formatBytes(file.size);
-        
-        // Set document icons
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (ext === 'pdf') {
-            document.getElementById('fileIcon').textContent = '📄';
-        } else {
-            document.getElementById('fileIcon').textContent = '🖼️';
-        }
+        // Disable analyze button while processing/optimizing image
+        analyzeBtn.setAttribute('disabled', 'true');
 
-        fileCard.style.display = 'block';
-        dropzone.style.display = 'none';
-        
-        // Enable click analyzer
-        analyzeBtn.removeAttribute('disabled');
+        compressImage(file, (processedFile) => {
+            selectedFile = processedFile;
+            
+            // Show file details card
+            fileName.textContent = processedFile.name;
+            fileSize.textContent = formatBytes(processedFile.size);
+            
+            // Set document icons
+            const ext = processedFile.name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') {
+                document.getElementById('fileIcon').textContent = '📄';
+            } else {
+                document.getElementById('fileIcon').textContent = '🖼️';
+            }
+
+            fileCard.style.display = 'block';
+            dropzone.style.display = 'none';
+            
+            // Enable click analyzer
+            analyzeBtn.removeAttribute('disabled');
+        });
     }
 
     function resetFileSelection() {

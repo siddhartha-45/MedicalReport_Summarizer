@@ -87,9 +87,15 @@
             <section class="upload-section">
                 <div class="glass-card upload-container" id="dropzone">
                     <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" style="display: none;">
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
                     <div class="upload-icon">📤</div>
                     <h3>Drag & Drop your report here</h3>
                     <p>or <span class="browse-btn" id="browseBtn">browse files</span> from your computer</p>
+                    <div class="camera-btn-wrapper" style="margin-top: 12px; margin-bottom: 8px;">
+                        <button type="button" class="btn btn-secondary camera-btn-trigger" id="cameraBtn" style="width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                            <span>📷 Take Photo</span>
+                        </button>
+                    </div>
                     <span class="file-limits">Supports PDF, PNG, JPG up to 10MB</span>
                 </div>
 
@@ -280,6 +286,46 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Camera Capture Modal -->
+    <div class="camera-modal" id="cameraModal" style="display: none;">
+        <div class="camera-modal-content glass-card">
+            <div class="camera-modal-header">
+                <h3>📷 Take Photo with Camera</h3>
+                <button class="close-modal-btn" id="closeCameraBtn" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="camera-modal-body">
+                <div class="video-container" id="videoContainer">
+                    <video id="webcamVideo" autoplay playsinline muted></video>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <span class="placeholder-icon">📷</span>
+                        <p>Waiting for camera access...</p>
+                    </div>
+                </div>
+                <div class="preview-container" id="cameraPreviewContainer" style="display: none;">
+                    <canvas id="capturedCanvas" style="display: none;"></canvas>
+                    <img id="capturedImage" alt="Captured report snapshot">
+                </div>
+                <div class="select-wrapper camera-select-wrapper" id="cameraSelectWrapper" style="display: none;">
+                    <select id="cameraSelect" class="form-select">
+                        <option value="">Default Camera</option>
+                    </select>
+                </div>
+            </div>
+            <div class="camera-modal-footer">
+                <button class="btn btn-secondary" id="cancelCaptureBtn">Cancel</button>
+                <button class="btn btn-primary" id="capturePhotoBtn">
+                    <span>📸 Capture Photo</span>
+                </button>
+                <button class="btn btn-primary" id="usePhotoBtn" style="display: none;">
+                    <span>✔️ Use Photo</span>
+                </button>
+                <button class="btn btn-secondary" id="retakePhotoBtn" style="display: none;">
+                    <span>🔄 Retake</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- main.js link -->
