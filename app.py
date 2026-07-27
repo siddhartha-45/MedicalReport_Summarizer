@@ -1,6 +1,7 @@
 import os
 import base64
 import json
+import shutil
 import PyPDF2
 from PIL import Image
 from groq import Groq
@@ -11,6 +12,52 @@ from flask import Flask, request, jsonify, render_template
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure Tesseract path for Windows and other environments
+import sys
+
+
+def resolve_tesseract_path():
+    """Find a valid Tesseract executable path across common install locations."""
+    candidates = []
+
+    configured_path = getattr(pytesseract.pytesseract, "tesseract_cmd", None)
+    if configured_path:
+        candidates.append(configured_path)
+
+    env_path = os.getenv("TESSERACT_CMD")
+    if env_path:
+        candidates.append(env_path)
+
+    which_path = shutil.which("tesseract")
+    if which_path:
+        candidates.append(which_path)
+
+    if sys.platform == "win32":
+        candidates.extend([
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), r"Programs\Tesseract-OCR\tesseract.exe"),
+        ])
+    else:
+        candidates.extend([
+            "/usr/bin/tesseract",
+            "/usr/local/bin/tesseract",
+            "/opt/homebrew/bin/tesseract",
+        ])
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        candidate_path = str(candidate).strip()
+        if os.path.isfile(candidate_path):
+            pytesseract.pytesseract.tesseract_cmd = candidate_path
+            return candidate_path
+
+    return None
+
+
+resolve_tesseract_path()
 
 class MedicalReportAnalyzer:
     def __init__(self, groq_api_key=None):
@@ -24,6 +71,7 @@ class MedicalReportAnalyzer:
         
         # Store the API key for later use
         self.api_key = api_key
+        self.tesseract_path = resolve_tesseract_path()
         
         try:
             self.client = Groq(api_key=api_key)
@@ -51,6 +99,9 @@ class MedicalReportAnalyzer:
     def extract_text_from_image(self, image_file):
         """Extract text from image using OCR"""
         try:
+            if not self.tesseract_path:
+                return "Error extracting image text: Tesseract OCR is not available on this machine. Please install Tesseract OCR and restart the app."
+
             # Reset file pointer to beginning
             image_file.seek(0)
             
@@ -66,7 +117,7 @@ class MedicalReportAnalyzer:
             
             return text.strip() if text.strip() else "No text could be extracted from the image"
         except Exception as e:
-            return f"Error extracting image text: {str(e)}. Make sure Tesseract is installed."
+            return f"Error extracting image text: {str(e)}. Please install Tesseract OCR and ensure it is reachable from the app."
     
     def analyze_medical_report(self, report_text, language="English"):
         """Analyze medical report using Groq API in JSON mode"""
