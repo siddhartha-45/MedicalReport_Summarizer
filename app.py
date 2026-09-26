@@ -175,11 +175,11 @@ class MedicalReportAnalyzer:
         
         9. "disclaimer": Standard medical disclaimer clarifying that this is informational and they must consult a real doctor.
 
-        CRITICAL: You must return ONLY a raw JSON object. Do not wrap it in markdown formatting or add any leading/trailing text. Ensure the JSON is valid and parses correctly.
+        CRITICAL: You must return ONLY a complete raw JSON object. Do not wrap it in markdown formatting, use ellipses, or add leading/trailing text. Keep every string concise (one or two sentences) and use at most 3 items in each list so the complete JSON fits in the response.
         """.replace("{language}", language)
         
         user_prompt = f"""
-        Please analyze this medical report with EXTREME DETAIL about the medical problems identified. I want very comprehensive explanations about the conditions found.
+        Analyze this medical report clearly and concisely. Include only findings supported by the report and complete every required JSON field.
 
         MEDICAL REPORT TEXT:
         {report_text}
@@ -195,7 +195,8 @@ class MedicalReportAnalyzer:
                 ],
                 temperature=0.0,
                 response_format={"type": "json_object"},
-                max_tokens=3500
+                reasoning_effort="low",
+                max_tokens=3000
             )
             
             return response.choices[0].message.content
