@@ -187,14 +187,15 @@ class MedicalReportAnalyzer:
         
         try:
             response = self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                # Keep the model configurable because Groq periodically retires model IDs.
+                model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.0,
                 response_format={"type": "json_object"},
-                max_tokens=8000
+                max_tokens=3500
             )
             
             return response.choices[0].message.content
